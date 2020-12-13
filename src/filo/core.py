@@ -1,10 +1,24 @@
 #
 import os
 import time
+import datetime
+import logging
 #
 from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler
+from watchdog.events import FileSystemEventHandler, LoggingEventHandler
 
+class LHandler(LoggingEventHandler):
+	#constructor
+	def __init__(self, tracked_folder):
+		super(LHandler, self).__init__()
+		self.tracked_folder = tracked_folder
+		self.logger = logging.root
+	def on_moved(self, event):
+		what = 'directory' if event.is_directory else 'file'
+		self.logger.info("Moved %s: from %s to %s", what, event.src_path, event.dest_path)
+		time = str(datetime.datetime.now())
+		print(dir(event))
+		print(f"{time} Moved {what}: from {event.src_path} to {event.dest_path}")
 
 #file handle custom class
 class FHandler(FileSystemEventHandler):
@@ -57,12 +71,14 @@ class FileM:
 		self.files_destination = files_destination
 		self.directories_destination = directories_destination
 		self.event_handler = FHandler(tracked_directory, files_destination, directories_destination)
+		self.log_handler = LHandler(tracked_directory)
 		self.observer = Observer()
 
 	#run method
 	def run(self):
 		#set of the event listener
 		self.observer.schedule(self.event_handler, self.tracked_directory, recursive=True)
+		self.observer.schedule(self.log_handler, self.tracked_directory, recursive=True)
 		self.observer.start()
 		try:
 			#listener with loop
